@@ -1,5 +1,5 @@
 # 概要
-忘年会用のルーレットアプリ(元ネタ[https://niwakomablog.com/rouletteapp-contents/])
+忘年会用のルーレットアプリ([元ネタ](https://niwakomablog.com/rouletteapp-contents/]))
 
 # 仕様
 - 指定した人数分のルーレット
@@ -11,3 +11,5 @@
 - 当選演出
 - 品物を表示させたり，当選した人を表示させる (ターミナルで操作しても良い)
 - 面積の広さが途中で可変出来たらうれしい
+
+詳しくはissueに
