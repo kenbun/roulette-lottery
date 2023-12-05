@@ -1,6 +1,7 @@
 import tkinter as tk
 import numpy as np
-
+import time
+import threading
 
 class RouletteApp():
 
@@ -25,13 +26,16 @@ class RouletteApp():
         # set circle
         self.set_circle()
         self.fan_tags = ["fan01", "fan02", "fan03", "fan04", "fan05", "fan06"]
+        self.select = 0
         # set triangle
-        self.set_triangle()
+        # self.set_triangle()
         # set result text
         self.set_result_text()
         # check roulette
-        self.color_dict = {"#C7000B":"Red", "#D28300":"Orange", "#DFD000":"Yellow",
-                           "#00873C":"Green", "#005AA0":"Blue", "#800073":"Purple"}
+        # self.color_dict = {"#C7000B":"Red", "#D28300":"Orange", "#DFD000":"Yellow",
+        #                    "#00873C":"Green", "#005AA0":"Blue", "#800073":"Purple"}
+        self.static=True
+        self.check_roulette(0)
 
     def set_butttons(self):
         # Button
@@ -41,14 +45,15 @@ class RouletteApp():
         btn_x_start = btn_w * 1
         btn_x_stop = btn_w * 3
         btn_y = self.win_h - (btn_h + btn_margin)
-        btn_start = tk.Button(text="Start",
+        self.btn_start = tk.Button(text="Start",
                               font=("", 24),
                               command=self.clk_start)
-        btn_start.place(x=btn_x_start, y=btn_y, width=btn_w, height=btn_h,)
-        btn_stop = tk.Button(text="Stop",
+        self.btn_start.place(x=btn_x_start, y=btn_y, width=btn_w, height=btn_h,)
+        self.btn_stop = tk.Button(text="Stop",
                              font=("", 24),
+                             state="disabled",
                              command=self.clk_stop)
-        btn_stop.place(x=btn_x_stop, y=btn_y, width=btn_w, height=btn_h)
+        self.btn_stop.place(x=btn_x_stop, y=btn_y, width=btn_w, height=btn_h)
 
     def set_circle(self):
         # Circle Settings
@@ -61,32 +66,32 @@ class RouletteApp():
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                width=2,
                                start=30, extent=60,
-                               fill="#C7000B",
+                            #    fill="#C7000B",
                                tag="fan01")
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                width=2,
                                start=90, extent=60,
-                               fill="#D28300",
+                            #    fill="#D28300",
                                tag="fan02")
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                width=2,
                                start=150, extent=60,
-                               fill="#DFD000",
+                            #    fill="#DFD000",
                                tag="fan03")
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                width=2,
                                start=210, extent=60,
-                               fill="#00873C",
+                            #    fill="#00873C",
                                tag="fan04")
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                width=2,
                                start=270, extent=60,
-                               fill="#005AA0",
+                            #    fill="#005AA0",
                                tag="fan05")
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                width=2,
                                start=330, extent=60,
-                               fill="#800073",
+                            #    fill="#800073",
                                tag="fan06")
 
     def set_triangle(self):
@@ -114,41 +119,60 @@ class RouletteApp():
                                 tag=self.txt_tag)
 
     def rotate_fans(self):
-        for fan_tag in self.fan_tags:
-            start_angle = self.canvas.itemcget(fan_tag, "start")
-            start_angle = str(float(start_angle) - 10)
-            self.canvas.itemconfig(fan_tag, start=start_angle)
+        self.canvas.itemconfig(self.fan_tags[self.select],outline="black",width=2)
+        self.select=(self.select+1)%len(self.fan_tags)
+        self.canvas.itemconfig(self.fan_tags[self.select],outline="red",width=10)
+        self.canvas.itemconfig(self.txt_tag,text=self.fan_tags[self.select])
+        # for fan_tag in self.fan_tags: 図形が動くバージョン
+        #     start_angle = self.canvas.itemcget(fan_tag, "start")
+        #     start_angle = str(float(start_angle) - 10)
+        #     self.canvas.itemconfig(fan_tag, start=start_angle)
 
-    def check_roulette(self):
-        for fan_tag in self.fan_tags:
-            start_angle = float(self.canvas.itemcget(fan_tag, "start"))
-            if(start_angle <= 90 and 90 < (start_angle + 60)):
-                color = self.canvas.itemcget(fan_tag, "fill")
-                self.canvas.itemconfig(self.txt_tag, text=self.color_dict[color])
-
+    def check_roulette(self, flag):
+        flag %=2
+        color=["black","red"]
+        width=[2,10]
+        # if(cnt <= 0):
+        #     self.root.after_cancel(self.after_id)
+        #     return
+        self.canvas.itemconfig(self.fan_tags[self.select],outline=color[flag],width=width[flag])
+        if(self.static is True):
+            flag+=1
+        else:
+            flag=1
+        self.root.after(500,self.check_roulette,flag)
+        
     def rotate_10ms(self):
         self.rotate_fans()
-        self.after_id = self.root.after(10, self.rotate_10ms)
+        self.after_id = self.root.after(100, self.rotate_10ms)
 
     def rotate_ms(self, msec, cnt):
         self.rotate_fans()
         cnt -= 1
         if(cnt <= 0):
             self.root.after_cancel(self.after_id)
+            if(msec < 800):
+                cnt=3
+                self.after_id = self.root.after(msec+200,self.rotate_ms,msec+200,cnt)
+            else:
+                self.static=True
             return
         self.after_id = self.root.after(msec, self.rotate_ms, msec, cnt)
 
     def clk_start(self):
-        self.canvas.itemconfig(self.txt_tag, text="")
+        # self.canvas.itemconfig(self.txt_tag, text="")
+        self.static=False
+        self.btn_start["state"] = "disable"
+        self.btn_stop["state"] = "active"
         self.rotate_10ms()
 
     def clk_stop(self):
+        self.btn_stop["state"] = "disable"
         self.root.after_cancel(self.after_id)
-        cnt = np.random.randint(18, 36)
-        self.rotate_ms(100, cnt)
-        cnt = np.random.randint(12, 18)
-        self.rotate_ms(500, cnt)
-        self.check_roulette()
+        self.rotate_ms(200,4)
+        self.btn_start["state"] = "active"
+        self.check_roulette(0)
+
 
 
 if __name__ == '__main__':
