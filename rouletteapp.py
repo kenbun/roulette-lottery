@@ -10,11 +10,29 @@ class RouletteApp():
         self.win_w = 900
         self.win_h = 900
         self.win_size = "{}x{}".format(self.win_w, self.win_h)
+        self.members = ["タグ"+str(i) for i in range(15)]
+        self.fan_tags = self.members
+
         # root
         self.root = tk.Tk()
-        self.root.title("RouletteApp Part6")
+        self.root.title("RouletteApp")
         self.root.geometry(self.win_size)
         self.root.resizable(0, 0)
+        
+        # sub
+        self.sub = tk.Toplevel()
+        self.sub_w = 350
+        self.sub_h = 300
+        self.sub.geometry("{}x{}".format(self.sub_w, self.sub_h))
+        self.set_subwindow()
+        self.create_display()
+        pygame.mixer.init()
+        self.roulette_sound=pygame.mixer.Sound("./roulette-effect.mp3")
+        self.winner_sound=pygame.mixer.Sound("./winner.mp3")
+        self.static=True
+        self.check_roulette(0)
+
+    def create_display(self):
         # Canvas
         self.canvas = tk.Canvas(self.root,
                                 width=self.win_w,
@@ -24,17 +42,39 @@ class RouletteApp():
         # set buttons
         self.set_butttons()
         # set circle
-        self.fan_tags = ["fan"+str(i) for i in range(20)]
         self.set_circle()
         
         self.select = 0
         # set result text
         self.set_result_text()
-        pygame.mixer.init()
-        self.roulette_sound=pygame.mixer.Sound("./roulette-effect.mp3")
-        self.winner_sound=pygame.mixer.Sound("./winner.mp3")
-        self.static=True
-        self.check_roulette(0)
+
+    def reload_roulette(self):
+        self.canvas.delete("all")
+        self.fan_tags=[]
+        for i in self.members:
+            if not self.win_or_not[i].get():
+                for j in range(self.prob[i].get()):
+                    self.fan_tags.append(i+"_"+str(j))
+        self.create_display()
+
+
+    def set_subwindow(self):
+        self.prob = {}
+        self.spin = {}
+        self.win_or_not = {}
+        self.check_btn = {}
+        for i, tag in enumerate(self.members):
+            self.prob[tag] = tk.IntVar(self.sub)
+            self.prob[tag].set(1)
+            self.spin[tag] = tk.Spinbox(self.sub,textvariable=self.prob[tag],
+                       from_=0,to=10,increment=1,)
+            self.win_or_not[tag]=tk.BooleanVar()
+            self.check_btn[tag] = tk.Checkbutton(self.sub,text=tag,variable=self.win_or_not[tag])
+            self.check_btn[tag].grid(row=i%10,column=0+int(i/10)*2)
+            self.spin[tag].grid(row=i%10,column=1+int(i/10)*2)
+        
+        self.reload_btn = tk.Button(self.sub,text="Reload",font=("",18), command=self.reload_roulette)
+        self.reload_btn.place(x=125,y=250,width=100,height=50)
 
     def set_butttons(self):
         # Button
@@ -61,9 +101,11 @@ class RouletteApp():
         circle_lty = 100
         circle_rbx = circle_ltx + self.circle_r * 2
         circle_rby = circle_lty + self.circle_r * 2
+        random.shuffle(self.fan_tags)
+    
         # Circle
         angle = 360/len(self.fan_tags)
-        start = 0
+        start = 0        
         for i in range(len(self.fan_tags)-1):
             self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
                                     width=2,
@@ -77,8 +119,7 @@ class RouletteApp():
                                 tag=self.fan_tags[-1])
         self.draw_text_on_arc(circle_ltx, circle_lty, circle_rbx, circle_rby, start, 360-start, self.fan_tags[-1])
 
-    def draw_text_on_arc(self, ltx, lty, rbx, rby, start, extent, tag):
-        # 円弧の中心座標を計算
+    def draw_text_on_arc(self, ltx, lty, rbx, rby, start, extent, tag):# show tags
         radius = (rbx - ltx) / 2
         mid_angle = start + extent / 2
         mid_angle_rad = math.radians(360-mid_angle)
@@ -86,14 +127,14 @@ class RouletteApp():
         center_y = (lty + rby) / 2
         text_x = center_x + radius * math.cos(mid_angle_rad)*1.1
         text_y = center_y + radius * math.sin(mid_angle_rad)*1.1
-        self.canvas.create_text(text_x, text_y, text=tag,font=("",18))
+        self.canvas.create_text(text_x, text_y, text=tag.split("_")[0],font=("",18))
 
     def set_result_text(self):
         txt_x = self.win_w / 2
         txt_y = self.win_h / 2 - self.circle_r - 125
         self.txt_tag = "result_text"
         self.canvas.create_text(txt_x, txt_y,
-                                text="Result",
+                                text="",
                                 font=("", 24),
                                 tag=self.txt_tag)
 
@@ -102,7 +143,7 @@ class RouletteApp():
         self.canvas.itemconfig(self.fan_tags[self.select],outline="black",width=2)
         self.select=(self.select+1)%len(self.fan_tags)
         self.canvas.itemconfig(self.fan_tags[self.select],outline="red",width=10)
-        self.canvas.itemconfig(self.txt_tag,text=self.fan_tags[self.select])
+        self.canvas.itemconfig(self.txt_tag,text=self.fan_tags[self.select].split("_")[0])
 
     def check_roulette(self, flag):
         flag %=2
