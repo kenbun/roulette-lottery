@@ -2,6 +2,7 @@ import tkinter as tk
 import numpy as np
 import time
 import threading
+import pygame
 
 class RouletteApp():
 
@@ -31,6 +32,9 @@ class RouletteApp():
         # self.set_triangle()
         # set result text
         self.set_result_text()
+        pygame.mixer.init()
+        self.roulette_sound=pygame.mixer.Sound("./roulette-effect.mp3")
+        self.winner_sound=pygame.mixer.Sound("./winner.mp3")
         # check roulette
         # self.color_dict = {"#C7000B":"Red", "#D28300":"Orange", "#DFD000":"Yellow",
         #                    "#00873C":"Green", "#005AA0":"Blue", "#800073":"Purple"}
@@ -119,6 +123,7 @@ class RouletteApp():
                                 tag=self.txt_tag)
 
     def rotate_fans(self):
+        self.roulette_sound.play(maxtime=100)
         self.canvas.itemconfig(self.fan_tags[self.select],outline="black",width=2)
         self.select=(self.select+1)%len(self.fan_tags)
         self.canvas.itemconfig(self.fan_tags[self.select],outline="red",width=10)
@@ -155,8 +160,9 @@ class RouletteApp():
                 cnt=3
                 self.after_id = self.root.after(msec+200,self.rotate_ms,msec+200,cnt)
             else:
+                self.winner_sound.play()
                 self.static=True
-            return
+            return 0
         self.after_id = self.root.after(msec, self.rotate_ms, msec, cnt)
 
     def clk_start(self):
