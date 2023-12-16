@@ -1,15 +1,14 @@
 import tkinter as tk
-import numpy as np
-import time
-import threading
+import math
 import pygame
+import random
 
 class RouletteApp():
 
     def __init__(self):
         # window size
-        self.win_w = 800
-        self.win_h = 800
+        self.win_w = 900
+        self.win_h = 900
         self.win_size = "{}x{}".format(self.win_w, self.win_h)
         # root
         self.root = tk.Tk()
@@ -25,19 +24,15 @@ class RouletteApp():
         # set buttons
         self.set_butttons()
         # set circle
+        self.fan_tags = ["fan"+str(i) for i in range(20)]
         self.set_circle()
-        self.fan_tags = ["fan01", "fan02", "fan03", "fan04", "fan05", "fan06"]
+        
         self.select = 0
-        # set triangle
-        # self.set_triangle()
         # set result text
         self.set_result_text()
         pygame.mixer.init()
         self.roulette_sound=pygame.mixer.Sound("./roulette-effect.mp3")
         self.winner_sound=pygame.mixer.Sound("./winner.mp3")
-        # check roulette
-        # self.color_dict = {"#C7000B":"Red", "#D28300":"Orange", "#DFD000":"Yellow",
-        #                    "#00873C":"Green", "#005AA0":"Blue", "#800073":"Purple"}
         self.static=True
         self.check_roulette(0)
 
@@ -61,57 +56,37 @@ class RouletteApp():
 
     def set_circle(self):
         # Circle Settings
-        self.circle_r = 200
+        self.circle_r = 300
         circle_ltx = self.win_w / 2 - self.circle_r
-        circle_lty = 200
+        circle_lty = 100
         circle_rbx = circle_ltx + self.circle_r * 2
         circle_rby = circle_lty + self.circle_r * 2
         # Circle
+        angle = 360/len(self.fan_tags)
+        start = 0
+        for i in range(len(self.fan_tags)-1):
+            self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
+                                    width=2,
+                                    start=start, extent=angle,
+                                    tag=self.fan_tags[i])
+            self.draw_text_on_arc(circle_ltx, circle_lty, circle_rbx, circle_rby, start, angle, self.fan_tags[i])
+            start += angle
         self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
-                               width=2,
-                               start=30, extent=60,
-                            #    fill="#C7000B",
-                               tag="fan01")
-        self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
-                               width=2,
-                               start=90, extent=60,
-                            #    fill="#D28300",
-                               tag="fan02")
-        self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
-                               width=2,
-                               start=150, extent=60,
-                            #    fill="#DFD000",
-                               tag="fan03")
-        self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
-                               width=2,
-                               start=210, extent=60,
-                            #    fill="#00873C",
-                               tag="fan04")
-        self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
-                               width=2,
-                               start=270, extent=60,
-                            #    fill="#005AA0",
-                               tag="fan05")
-        self.canvas.create_arc(circle_ltx, circle_lty, circle_rbx, circle_rby,
-                               width=2,
-                               start=330, extent=60,
-                            #    fill="#800073",
-                               tag="fan06")
+                                width=2,
+                                start=start, extent=360-start,
+                                tag=self.fan_tags[-1])
+        self.draw_text_on_arc(circle_ltx, circle_lty, circle_rbx, circle_rby, start, 360-start, self.fan_tags[-1])
 
-    def set_triangle(self):
-        tri_edge_half = round((30 * np.cos(np.radians(30))), 1)
-        tri_edge = tri_edge_half * 2
-        tri_edge_height = round(tri_edge * np.cos(np.radians(30)), 1)
-        (tri_btm_x, tri_btm_y) = (self.win_w / 2, self.win_h / 2 - self.circle_r - 10)
-        (tri_lt_x, tri_lt_y) = (tri_btm_x - tri_edge_half, tri_btm_y - tri_edge_height)
-        (tri_rt_x, tri_rt_y) = (tri_btm_x + tri_edge_half, tri_btm_y - tri_edge_height)
-        self.canvas.create_polygon(tri_btm_x, tri_btm_y,
-                                   tri_lt_x, tri_lt_y,
-                                   tri_rt_x, tri_rt_y,
-                                   tri_btm_x, tri_btm_y,
-                                   outline="",
-                                   joinstyle=tk.MITER,
-                                   fill="#000000")
+    def draw_text_on_arc(self, ltx, lty, rbx, rby, start, extent, tag):
+        # 円弧の中心座標を計算
+        radius = (rbx - ltx) / 2
+        mid_angle = start + extent / 2
+        mid_angle_rad = math.radians(360-mid_angle)
+        center_x = (ltx + rbx) / 2
+        center_y = (lty + rby) / 2
+        text_x = center_x + radius * math.cos(mid_angle_rad)*1.1
+        text_y = center_y + radius * math.sin(mid_angle_rad)*1.1
+        self.canvas.create_text(text_x, text_y, text=tag,font=("",18))
 
     def set_result_text(self):
         txt_x = self.win_w / 2
@@ -128,18 +103,11 @@ class RouletteApp():
         self.select=(self.select+1)%len(self.fan_tags)
         self.canvas.itemconfig(self.fan_tags[self.select],outline="red",width=10)
         self.canvas.itemconfig(self.txt_tag,text=self.fan_tags[self.select])
-        # for fan_tag in self.fan_tags: 図形が動くバージョン
-        #     start_angle = self.canvas.itemcget(fan_tag, "start")
-        #     start_angle = str(float(start_angle) - 10)
-        #     self.canvas.itemconfig(fan_tag, start=start_angle)
 
     def check_roulette(self, flag):
         flag %=2
         color=["black","red"]
         width=[2,10]
-        # if(cnt <= 0):
-        #     self.root.after_cancel(self.after_id)
-        #     return
         self.canvas.itemconfig(self.fan_tags[self.select],outline=color[flag],width=width[flag])
         if(self.static is True):
             flag+=1
@@ -162,11 +130,11 @@ class RouletteApp():
             else:
                 self.winner_sound.play()
                 self.static=True
+                self.btn_start["state"] = "active"
             return 0
         self.after_id = self.root.after(msec, self.rotate_ms, msec, cnt)
 
     def clk_start(self):
-        # self.canvas.itemconfig(self.txt_tag, text="")
         self.static=False
         self.btn_start["state"] = "disable"
         self.btn_stop["state"] = "active"
@@ -175,10 +143,8 @@ class RouletteApp():
     def clk_stop(self):
         self.btn_stop["state"] = "disable"
         self.root.after_cancel(self.after_id)
-        self.rotate_ms(200,4)
-        self.btn_start["state"] = "active"
+        self.rotate_ms(200,random.randint(1,10))
         self.check_roulette(0)
-
 
 
 if __name__ == '__main__':
