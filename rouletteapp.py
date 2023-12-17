@@ -6,12 +6,12 @@ import pandas as pd
 
 class RouletteApp():
 
-    def __init__(self):
+    def __init__(self, file):
         # window size
         self.win_w = 900
-        self.win_h = 900
+        self.win_h = 1000
         self.win_size = "{}x{}".format(self.win_w, self.win_h)
-        self.player = self.load_player()
+        self.player = self.load_player(file)
         self.fan_tags = self.player.tag.tolist()
 
         # root
@@ -22,19 +22,20 @@ class RouletteApp():
         
         # sub
         self.sub = tk.Toplevel()
-        self.sub_w = 350
+        self.sub_w = 500
         self.sub_h = 300
         self.sub.geometry("{}x{}".format(self.sub_w, self.sub_h))
         self.set_subwindow()
         self.create_display()
+        self.reload_roulette()
         pygame.mixer.init()
         self.roulette_sound=pygame.mixer.Sound("./roulette-effect.mp3")
         self.winner_sound=pygame.mixer.Sound("./winner.mp3")
         self.static=True
         self.check_roulette(0)
 
-    def load_player(self):
-        player = pd.read_csv("./input.csv")
+    def load_player(self, file):
+        player = pd.read_csv(file)
         return player
 
     def create_display(self):
@@ -80,7 +81,7 @@ class RouletteApp():
             self.spin[data.tag].grid(row=i%10,column=1+int(i/10)*2)
         
         self.reload_btn = tk.Button(self.sub,text="Reload",font=("",18), command=self.reload_roulette)
-        self.reload_btn.place(x=125,y=250,width=100,height=50)
+        self.reload_btn.place(x=self.sub_w*2/5,y=250,width=100,height=50)
 
     def set_butttons(self):
         # Button
@@ -104,7 +105,7 @@ class RouletteApp():
         # Circle Settings
         self.circle_r = 300
         circle_ltx = self.win_w / 2 - self.circle_r
-        circle_lty = 100
+        circle_lty = 150
         circle_rbx = circle_ltx + self.circle_r * 2
         circle_rby = circle_lty + self.circle_r * 2
         random.shuffle(self.fan_tags)
@@ -131,18 +132,24 @@ class RouletteApp():
         mid_angle_rad = math.radians(360-mid_angle)
         center_x = (ltx + rbx) / 2
         center_y = (lty + rby) / 2
-        text_x = center_x + radius * math.cos(mid_angle_rad)*1.1
-        text_y = center_y + radius * math.sin(mid_angle_rad)*1.1
+        text_x = center_x + radius * math.cos(mid_angle_rad)*1.2
+        text_y = center_y + radius * math.sin(mid_angle_rad)*1.2
         self.canvas.create_text(text_x, text_y, text=tag.split("_")[0],font=("",18))
 
     def set_result_text(self):
         txt_x = self.win_w / 2
-        txt_y = self.win_h / 2 - self.circle_r - 125
+        txt_y = self.win_h / 2 - self.circle_r - 170
         self.txt_tag = "result_text"
         self.canvas.create_text(txt_x, txt_y,
                                 text="",
                                 font=("", 24),
                                 tag=self.txt_tag)
+        
+        rect_width = 200
+        rect_height = 24+20
+        self.canvas.create_rectangle(txt_x-rect_width/2, txt_y-rect_height/2,
+                                     txt_x+rect_width/2, txt_y+rect_height/2,
+                                     outline="red", width=7)
 
     def rotate_fans(self):
         self.roulette_sound.play(maxtime=100)
@@ -190,10 +197,11 @@ class RouletteApp():
     def clk_stop(self):
         self.btn_stop["state"] = "disable"
         self.root.after_cancel(self.after_id)
-        self.rotate_ms(200,random.randint(1,10))
+        self.rotate_ms(200,random.randint(1,20))
         self.check_roulette(0)
 
 
 if __name__ == '__main__':
-    rouletteapp = RouletteApp()
+    file = input("file name:")
+    rouletteapp = RouletteApp(file)
     rouletteapp.root.mainloop()
