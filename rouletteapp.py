@@ -2,6 +2,7 @@ import tkinter as tk
 import math
 import pygame
 import random
+import pandas as pd
 
 class RouletteApp():
 
@@ -10,8 +11,8 @@ class RouletteApp():
         self.win_w = 900
         self.win_h = 900
         self.win_size = "{}x{}".format(self.win_w, self.win_h)
-        self.members = ["タグ"+str(i) for i in range(15)]
-        self.fan_tags = self.members
+        self.player = self.load_player()
+        self.fan_tags = self.player.tag.tolist()
 
         # root
         self.root = tk.Tk()
@@ -32,6 +33,10 @@ class RouletteApp():
         self.static=True
         self.check_roulette(0)
 
+    def load_player(self):
+        player = pd.read_csv("./input.csv")
+        return player
+
     def create_display(self):
         # Canvas
         self.canvas = tk.Canvas(self.root,
@@ -51,7 +56,7 @@ class RouletteApp():
     def reload_roulette(self):
         self.canvas.delete("all")
         self.fan_tags=[]
-        for i in self.members:
+        for i in self.player.tag:
             if not self.win_or_not[i].get():
                 for j in range(self.prob[i].get()):
                     self.fan_tags.append(i+"_"+str(j))
@@ -63,15 +68,16 @@ class RouletteApp():
         self.spin = {}
         self.win_or_not = {}
         self.check_btn = {}
-        for i, tag in enumerate(self.members):
-            self.prob[tag] = tk.IntVar(self.sub)
-            self.prob[tag].set(1)
-            self.spin[tag] = tk.Spinbox(self.sub,textvariable=self.prob[tag],
-                       from_=0,to=10,increment=1,)
-            self.win_or_not[tag]=tk.BooleanVar()
-            self.check_btn[tag] = tk.Checkbutton(self.sub,text=tag,variable=self.win_or_not[tag])
-            self.check_btn[tag].grid(row=i%10,column=0+int(i/10)*2)
-            self.spin[tag].grid(row=i%10,column=1+int(i/10)*2)
+        fg_color=["black","red"]
+        for i, data in self.player.iterrows():
+            self.prob[data.tag] = tk.IntVar(self.sub)
+            self.prob[data.tag].set(data.init)
+            self.spin[data.tag] = tk.Spinbox(self.sub,textvariable=self.prob[data.tag],
+                       from_=0,to=15,increment=data.increment,)
+            self.win_or_not[data.tag]=tk.BooleanVar()
+            self.check_btn[data.tag] = tk.Checkbutton(self.sub,text=data.tag,variable=self.win_or_not[data.tag],fg=fg_color[data.increment>0])
+            self.check_btn[data.tag].grid(row=i%10,column=0+int(i/10)*2)
+            self.spin[data.tag].grid(row=i%10,column=1+int(i/10)*2)
         
         self.reload_btn = tk.Button(self.sub,text="Reload",font=("",18), command=self.reload_roulette)
         self.reload_btn.place(x=125,y=250,width=100,height=50)
