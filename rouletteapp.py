@@ -3,22 +3,24 @@ import math
 import pygame
 import random
 import pandas as pd
+from PIL import Image, ImageTk
 
 class RouletteApp():
 
     def __init__(self, file):
-        # window size
-        self.win_w = 900
-        self.win_h = 1000
-        self.win_size = "{}x{}".format(self.win_w, self.win_h)
-        self.player = self.load_player(file)
-        self.fan_tags = self.player.tag.tolist()
-
         # root
         self.root = tk.Tk()
         self.root.title("RouletteApp")
+        self.win_w, self.win_h = self.root.maxsize()
+        self.win_w =int(self.win_w*0.9)
+        self.win_h =int(self.win_h*0.9)
+        self.win_size = "{}x{}".format(self.win_w, self.win_h)
         self.root.geometry(self.win_size)
         self.root.resizable(0, 0)
+
+        # window size
+        self.player = self.load_player(file)
+        self.fan_tags = self.player.tag.tolist()
         
         # sub
         self.sub = tk.Toplevel()
@@ -39,12 +41,18 @@ class RouletteApp():
         return player
 
     def create_display(self):
+        global img
         # Canvas
         self.canvas = tk.Canvas(self.root,
                                 width=self.win_w,
                                 height=self.win_h,
                                 background="#FFFFFF")
         self.canvas.place(x=0, y=0)
+        img=Image.open("background.jpg")
+        img=img.resize((self.win_w,self.win_h))
+        img.putalpha(64)
+        img=ImageTk.PhotoImage(img)
+        self.canvas.create_image(0,0,anchor='nw',image=img)
         # set buttons
         self.set_butttons()
         # set circle
@@ -59,37 +67,49 @@ class RouletteApp():
         self.fan_tags=[]
         for i in self.player.tag:
             if not self.win_or_not[i].get():
-                for j in range(self.prob[i].get()):
+                for j in range(self.prob[i].get()*(1+self.presenter[i].get())):
                     self.fan_tags.append(i+"_"+str(j))
         self.create_display()
 
+    def increment_roulette(self):
+        for i, data in self.player.iterrows():
+            value = self.prob[data.tag].get()
+            self.prob[data.tag].set(value+data.increment)
 
     def set_subwindow(self):
         self.prob = {}
         self.spin = {}
         self.win_or_not = {}
         self.check_btn = {}
+        self.present_check_btn = {}
+        self.presenter = {}
         fg_color=["black","red"]
+
         for i, data in self.player.iterrows():
             self.prob[data.tag] = tk.IntVar(self.sub)
             self.prob[data.tag].set(data.init)
             self.spin[data.tag] = tk.Spinbox(self.sub,textvariable=self.prob[data.tag],
-                       from_=0,to=15,increment=data.increment,)
+                       from_=0,to=20,increment=data.increment,width=10)
+            self.presenter[data.tag]=tk.BooleanVar()
+            self.present_check_btn[data.tag] = tk.Checkbutton(self.sub,text="presenter",variable=self.presenter[data.tag],fg=fg_color[data.increment>0])
+            self.present_check_btn[data.tag].grid(row=i%10,column=0+int(i/10)*3)
             self.win_or_not[data.tag]=tk.BooleanVar()
             self.check_btn[data.tag] = tk.Checkbutton(self.sub,text=data.tag,variable=self.win_or_not[data.tag],fg=fg_color[data.increment>0])
-            self.check_btn[data.tag].grid(row=i%10,column=0+int(i/10)*2)
-            self.spin[data.tag].grid(row=i%10,column=1+int(i/10)*2)
+            self.check_btn[data.tag].grid(row=i%10,column=1+int(i/10)*3)
+            self.spin[data.tag].grid(row=i%10,column=2+int(i/10)*3)
         
+        self.increment_btn = tk.Button(self.sub,text="Increment",font=("",18), command=self.increment_roulette)
+        self.increment_btn.place(x=self.sub_w*3/5,y=250,width=100,height=50)
         self.reload_btn = tk.Button(self.sub,text="Reload",font=("",18), command=self.reload_roulette)
-        self.reload_btn.place(x=self.sub_w*2/5,y=250,width=100,height=50)
+        self.reload_btn.place(x=self.sub_w*1/5,y=250,width=100,height=50)
 
     def set_butttons(self):
         # Button
         btn_w = int(self.win_w / 5)
-        btn_h = int(btn_w / 2)
+        btn_h = int(btn_w / 3)
         btn_margin = 50
-        btn_x_start = btn_w * 1
-        btn_x_stop = btn_w * 3
+        btn_x_start = 0+10
+        btn_x_stop = btn_w * 4-10
         btn_y = self.win_h - (btn_h + btn_margin)
         self.btn_start = tk.Button(text="Start",
                               font=("", 24),
@@ -103,7 +123,7 @@ class RouletteApp():
 
     def set_circle(self):
         # Circle Settings
-        self.circle_r = 300
+        self.circle_r = int((self.win_h*4/5-(24+20))/1.2)/2
         circle_ltx = self.win_w / 2 - self.circle_r
         circle_lty = 150
         circle_rbx = circle_ltx + self.circle_r * 2
@@ -137,16 +157,17 @@ class RouletteApp():
         self.canvas.create_text(text_x, text_y, text=tag.split("_")[0],font=("",18))
 
     def set_result_text(self):
+        rect_width = int(self.win_w/5)
+        rect_height = 24+20
         txt_x = self.win_w / 2
-        txt_y = self.win_h / 2 - self.circle_r - 170
+        txt_y = rect_height+10
+
         self.txt_tag = "result_text"
         self.canvas.create_text(txt_x, txt_y,
                                 text="",
                                 font=("", 24),
                                 tag=self.txt_tag)
         
-        rect_width = 200
-        rect_height = 24+20
         self.canvas.create_rectangle(txt_x-rect_width/2, txt_y-rect_height/2,
                                      txt_x+rect_width/2, txt_y+rect_height/2,
                                      outline="red", width=7)
